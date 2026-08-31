@@ -2,8 +2,8 @@
 
 Pigeon makes open-weight safety models usable inside [Coop](https://github.com/roostorg/coop)
 and [Osprey](https://github.com/roostorg/osprey) with the same effort as adding a hosted API.
-A model is described by a **modelfile** (a small YAML recipe), not a per-model integration
-package. Pigeon is a service: consumers call it over HTTP; it holds the modelfiles, the
+A model is described by a **model spec** (a small YAML recipe), not a per-model integration
+package. Pigeon is a service: consumers call it over HTTP; it holds the model specs, the
 provider credentials, and the response-parsing logic.
 
 It also runs standalone, as a way to manage and send requests to open weights across any
@@ -14,7 +14,7 @@ inference provider, without Coop or Osprey.
 
 ## What it does
 
-- **Discover** (`GET /v1/modelfiles`): lists the signals an org can use. Fixed-label
+- **Discover** (`GET /v1/modelspecs`): lists the signals an org can use. Fixed-label
   classifiers fan out to one label each; policy-bound BYOP custom models appear as a single
   verdict signal.
 - **Classify** (`POST /v1/classify`): input in, normalized `[{label, score}]` out. The caller
@@ -25,7 +25,7 @@ inference provider, without Coop or Osprey.
 
 ## Model kinds
 
-| Kind | modelfile | Signals | Policy |
+| Kind | model spec | Signals | Policy |
 | --- | --- | --- | --- |
 | `classifier` | `format: classifier`, fixed `labels` | one per label | none |
 | `byop` | `format: chat`, `policy_argument: true` | one per bound policy | pre-bound (Coop) or per-call (Osprey) |
@@ -45,7 +45,7 @@ Try it (dev token from `.env.example`):
 
 ```bash
 TOKEN="dev-token"
-curl -s localhost:8900/v1/modelfiles -H "Authorization: Bearer $TOKEN"
+curl -s localhost:8900/v1/modelspecs -H "Authorization: Bearer $TOKEN"
 
 curl -s localhost:8900/v1/classify -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
@@ -60,7 +60,7 @@ curl -s localhost:8900/v1/policies -H "Authorization: Bearer $TOKEN" \
 ## Providers
 
 The inference backend is a swappable seam, selected by `PIGEON_PROVIDER`. All three run the
-same modelfiles and the same `/v1/classify` contract.
+same model specs and the same `/v1/classify` contract.
 
 | `PIGEON_PROVIDER` | Backend | Use for |
 | --- | --- | --- |
@@ -71,8 +71,8 @@ same modelfiles and the same `/v1/classify` contract.
 ### `live` — hosted or self-served endpoints (verified with Ollama)
 
 `live` routes chat/completion through LiteLLM and HF-style classifiers over HTTP. Point each
-modelfile's `model.endpoint` at your runtime. Verified end to end against **Ollama** on macOS
-(Apple Silicon): a BYOP `verdict` modelfile with `runtime: ollama`, `model.id: <ollama model>`,
+model spec's `model.endpoint` at your runtime. Verified end to end against **Ollama** on macOS
+(Apple Silicon): a BYOP `verdict` model spec with `runtime: ollama`, `model.id: <ollama model>`,
 `endpoint: http://localhost:11434` scores real content through the full Pigeon path.
 
 ```bash
@@ -103,13 +103,13 @@ path lands.
 
 ## Layout
 
-- `src/pigeon/modelfiles.py` - modelfile spec + loader
-- `src/pigeon/registry.py` - modelfiles + policies -> the signal list; model-ref resolution
+- `src/pigeon/modelspecs.py` - model spec schema + loader
+- `src/pigeon/registry.py` - model specs + policies -> the signal list; model-ref resolution
 - `src/pigeon/parsing.py` - response normalization (ported from Coop's `modelClient.ts`)
 - `src/pigeon/classify.py` - the classify orchestration
 - `src/pigeon/providers/` - the inference seam (`mock`, `litellm_provider`, `transformers_provider`)
 - `src/pigeon/api.py` - the HTTP endpoints
-- `modelfiles/` - example modelfiles (`shieldgemma-2b` classifier, `shieldstral`/`cope-b` BYOP)
+- `modelspecs/` - example model specs (`shieldgemma-2b` classifier, `shieldstral`/`cope-b` BYOP)
 
 ## Known gaps (for the eng team)
 

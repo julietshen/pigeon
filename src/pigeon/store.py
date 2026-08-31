@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-"""Per-org state: versioned BYOP policies and which base modelfiles an org has enabled.
+"""Per-org state: versioned BYOP policies and which base modelspecs an org has enabled.
 SQLite keeps the prototype self-contained; swap for the eng team's datastore later."""
 
 
@@ -30,8 +30,8 @@ class Store:
             );
             CREATE TABLE IF NOT EXISTS enabled (
                 org_id TEXT NOT NULL,
-                modelfile TEXT NOT NULL,
-                PRIMARY KEY (org_id, modelfile)
+                modelspec TEXT NOT NULL,
+                PRIMARY KEY (org_id, modelspec)
             );
             """
         )
@@ -85,17 +85,17 @@ class Store:
             ).fetchone()
         return dict(row) if row else None
 
-    # ---- modelfile enablement ----
+    # ---- modelspec enablement ----
 
-    def enable(self, org_id: str, modelfile: str) -> None:
+    def enable(self, org_id: str, modelspec: str) -> None:
         self._conn.execute(
-            "INSERT OR IGNORE INTO enabled (org_id, modelfile) VALUES (?, ?)",
-            (org_id, modelfile),
+            "INSERT OR IGNORE INTO enabled (org_id, modelspec) VALUES (?, ?)",
+            (org_id, modelspec),
         )
         self._conn.commit()
 
-    def enabled_modelfiles(self, org_id: str) -> set[str]:
+    def enabled_modelspecs(self, org_id: str) -> set[str]:
         rows = self._conn.execute(
-            "SELECT modelfile FROM enabled WHERE org_id = ?", (org_id,)
+            "SELECT modelspec FROM enabled WHERE org_id = ?", (org_id,)
         ).fetchall()
-        return {r["modelfile"] for r in rows}
+        return {r["modelspec"] for r in rows}

@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import httpx
 
-from ..modelfiles import Modelfile
+from ..modelspecs import ModelSpec
 
 # LiteLLM model-name prefixes per runtime. See https://docs.litellm.ai/docs/providers
 _RUNTIME_PREFIX = {
@@ -15,7 +15,7 @@ _RUNTIME_PREFIX = {
 }
 
 
-def _litellm_model(mf: Modelfile) -> str:
+def _litellm_model(mf: ModelSpec) -> str:
     prefix = _RUNTIME_PREFIX.get(mf.model.runtime, "openai")
     return f"{prefix}/{mf.model.id}"
 
@@ -27,7 +27,7 @@ class LiteLLMProvider:
     def __init__(self, timeout_s: float = 30.0):
         self._timeout = timeout_s
 
-    async def run_chat(self, mf: Modelfile, messages: list[dict]) -> str:
+    async def run_chat(self, mf: ModelSpec, messages: list[dict]) -> str:
         import litellm
 
         kwargs: dict[str, Any] = {
@@ -42,7 +42,7 @@ class LiteLLMProvider:
         return response.choices[0].message.content or ""
 
     async def run_chat_top_logprobs(
-        self, mf: Modelfile, messages: list[dict]
+        self, mf: ModelSpec, messages: list[dict]
     ) -> list[tuple[str, float]]:
         import litellm
 
@@ -62,12 +62,12 @@ class LiteLLMProvider:
         return [(entry.token, entry.logprob) for entry in entries]
 
     async def run_classifier(
-        self, mf: Modelfile, *, text: Optional[str], media_url: Optional[str]
+        self, mf: ModelSpec, *, text: Optional[str], media_url: Optional[str]
     ) -> Any:
         url = mf.model.endpoint
         if not url:
             raise ValueError(
-                f"classifier modelfile '{mf.name}' requires model.endpoint"
+                f"classifier model spec '{mf.name}' requires model.endpoint"
             )
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             if media_url is not None:

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from .api import build_router
 from .auth import make_auth
-from .modelfiles import load_modelfiles
+from .modelspecs import load_modelspecs
 from .providers.base import ProviderClient
 from .providers.mock import MockProvider
 from .registry import Registry
@@ -28,9 +28,9 @@ def _make_provider(settings: Settings) -> ProviderClient:
 
 def create_app(settings: Optional[Settings] = None) -> FastAPI:
     settings = settings or Settings.from_env()
-    modelfiles = load_modelfiles(settings.modelfiles_dir)
+    modelspecs = load_modelspecs(settings.modelspecs_dir)
     store = Store(settings.db_path)
-    registry = Registry(modelfiles, store)
+    registry = Registry(modelspecs, store)
     provider = _make_provider(settings)
     get_org = make_auth(settings)
 

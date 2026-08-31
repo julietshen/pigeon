@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-# ---- Discover (GET /v1/modelfiles) ----
+# ---- Discover (GET /v1/modelspecs) ----
 
 
 class LabelSpec(BaseModel):
@@ -13,7 +13,7 @@ class LabelSpec(BaseModel):
     valueType: Literal["score"] = "score"
 
 
-class ModelfileSummary(BaseModel):
+class ModelSpecSummary(BaseModel):
     id: str
     version: str
     kind: Literal["classifier", "byop", "completion"]
@@ -22,8 +22,8 @@ class ModelfileSummary(BaseModel):
     labels: list[LabelSpec]
 
 
-class ModelfilesResponse(BaseModel):
-    modelfiles: list[ModelfileSummary]
+class ModelSpecsResponse(BaseModel):
+    modelspecs: list[ModelSpecSummary]
 
 
 # ---- Classify (POST /v1/classify) ----
@@ -55,7 +55,7 @@ class ClassifyResponse(BaseModel):
 
 class PolicyCreate(BaseModel):
     name: str
-    base: str  # base modelfile name; must be policy-steerable (BYOP)
+    base: str  # base model spec name; must be policy-steerable (BYOP)
     policyText: str
     display: Optional[str] = None
 

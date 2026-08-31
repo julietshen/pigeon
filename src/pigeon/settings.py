@@ -12,7 +12,7 @@ DEFAULT_DEV_ORG = "dev-org"
 @dataclass(frozen=True)
 class Settings:
     provider: str
-    modelfiles_dir: Path
+    modelspecs_dir: Path
     db_path: Path
     tokens: dict[str, str]  # bearer token -> org id
 
@@ -22,7 +22,7 @@ class Settings:
         tokens = json.loads(raw_tokens) if raw_tokens else {DEFAULT_DEV_TOKEN: DEFAULT_DEV_ORG}
         return Settings(
             provider=os.environ.get("PIGEON_PROVIDER", "mock"),
-            modelfiles_dir=Path(os.environ.get("PIGEON_MODELFILES_DIR", "modelfiles")),
+            modelspecs_dir=Path(os.environ.get("PIGEON_MODELSPECS_DIR", "modelspecs")),
             db_path=Path(os.environ.get("PIGEON_DB_PATH", "pigeon.db")),
             tokens=tokens,
         )

@@ -10,7 +10,7 @@ from .registry import Registry
 from .schemas import (
     ClassifyRequest,
     ClassifyResponse,
-    ModelfilesResponse,
+    ModelSpecsResponse,
     PolicyCreate,
     PolicyResponse,
 )
@@ -27,9 +27,9 @@ def build_router(
     async def health() -> dict:
         return {"status": "ok"}
 
-    @router.get("/v1/modelfiles", response_model=ModelfilesResponse)
-    async def list_modelfiles(org: str = Depends(get_org)) -> ModelfilesResponse:
-        return ModelfilesResponse(modelfiles=registry.list_signals(org))
+    @router.get("/v1/modelspecs", response_model=ModelSpecsResponse)
+    async def list_modelspecs(org: str = Depends(get_org)) -> ModelSpecsResponse:
+        return ModelSpecsResponse(modelspecs=registry.list_signals(org))
 
     @router.post("/v1/classify", response_model=ClassifyResponse)
     async def classify_endpoint(
@@ -69,11 +69,11 @@ def build_router(
     async def create_policy(
         body: PolicyCreate, org: str = Depends(get_org)
     ) -> PolicyResponse:
-        base = registry.modelfiles.get(body.base)
+        base = registry.modelspecs.get(body.base)
         if base is None or not base.policy_argument:
             raise HTTPException(
                 status_code=422,
-                detail=f"base '{body.base}' is not a policy-steerable (BYOP) modelfile",
+                detail=f"base '{body.base}' is not a policy-steerable (BYOP) model spec",
             )
         display = body.display or body.name
         version = registry.store.upsert_policy(

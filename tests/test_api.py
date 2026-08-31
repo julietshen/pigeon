@@ -6,12 +6,12 @@ def test_health(client):
 
 
 def test_auth_required(client):
-    assert client.get("/v1/modelfiles").status_code == 401
+    assert client.get("/v1/modelspecs").status_code == 401
 
 
 def test_discover_lists_classifier_not_byop_base(client, auth):
-    body = client.get("/v1/modelfiles", headers=auth).json()
-    ids = {m["id"] for m in body["modelfiles"]}
+    body = client.get("/v1/modelspecs", headers=auth).json()
+    ids = {m["id"] for m in body["modelspecs"]}
     assert "shieldgemma-2b" in ids
     # BYOP bases are reachable only via a bound policy, never exposed as a signal directly.
     assert "shieldstral" not in ids
@@ -19,8 +19,8 @@ def test_discover_lists_classifier_not_byop_base(client, auth):
 
 
 def test_discover_classifier_fans_out_to_labels(client, auth):
-    body = client.get("/v1/modelfiles", headers=auth).json()
-    sg = next(m for m in body["modelfiles"] if m["id"] == "shieldgemma-2b")
+    body = client.get("/v1/modelspecs", headers=auth).json()
+    sg = next(m for m in body["modelspecs"] if m["id"] == "shieldgemma-2b")
     label_ids = {lbl["id"] for lbl in sg["labels"]}
     assert label_ids == {"harassment", "hate", "sexual", "dangerous"}
 
@@ -63,7 +63,7 @@ def test_byop_pre_bound_policy_flow(client, auth):
     assert created.json()["version"] == "1"
 
     # It now shows up in discover as a single-label byop signal.
-    disc = client.get("/v1/modelfiles", headers=auth).json()["modelfiles"]
+    disc = client.get("/v1/modelspecs", headers=auth).json()["modelspecs"]
     custom = next(m for m in disc if m["id"] == "my-harassment-policy")
     assert custom["kind"] == "byop"
     assert custom["base"] == "cope-b"
@@ -108,7 +108,7 @@ def test_byop_cope_b_policy_flow(client, auth):
     )
     assert created.status_code == 200
 
-    disc = client.get("/v1/modelfiles", headers=auth).json()["modelfiles"]
+    disc = client.get("/v1/modelspecs", headers=auth).json()["modelspecs"]
     custom = next(m for m in disc if m["id"] == "cope-harassment")
     assert custom["kind"] == "byop"
     assert custom["base"] == "cope-b"
@@ -135,7 +135,7 @@ def test_shieldstral_logprob_policy_flow(client, auth):
     )
     assert created.status_code == 200
 
-    disc = client.get("/v1/modelfiles", headers=auth).json()["modelfiles"]
+    disc = client.get("/v1/modelspecs", headers=auth).json()["modelspecs"]
     custom = next(m for m in disc if m["id"] == "violence-policy")
     assert custom["kind"] == "byop"
     assert custom["base"] == "shieldstral"

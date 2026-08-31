@@ -12,7 +12,7 @@ Format = Literal["chat", "chat-harmony", "classifier"]
 InputType = Literal["text", "image", "audio"]
 
 
-class ModelSpec(BaseModel):
+class ModelRef(BaseModel):
     id: str
     runtime: Runtime
     endpoint: Optional[str] = None  # base URL (chat) or full inference URL (classifier)
@@ -30,10 +30,10 @@ class ParserSpec(BaseModel):
     response_path: Optional[str] = None  # dot-path into the response before parsing
 
 
-class Modelfile(BaseModel):
+class ModelSpec(BaseModel):
     name: str
     version: str
-    model: ModelSpec
+    model: ModelRef
     mode: Mode = "signal"
     format: Format = "chat"
     policy_argument: bool = False
@@ -56,16 +56,16 @@ class Modelfile(BaseModel):
         return "byop" if self.policy_argument else "classifier"
 
 
-def load_modelfiles(directory: Path) -> dict[str, Modelfile]:
-    """Load and validate every *.yaml/*.yml modelfile in a directory, keyed by name."""
-    result: dict[str, Modelfile] = {}
+def load_modelspecs(directory: Path) -> dict[str, ModelSpec]:
+    """Load and validate every *.yaml/*.yml model spec in a directory, keyed by name."""
+    result: dict[str, ModelSpec] = {}
     if not directory.exists():
         return result
     for path in sorted(directory.glob("*.y*ml")):
         raw = yaml.safe_load(path.read_text())
         try:
-            mf = Modelfile.model_validate(raw)
+            mf = ModelSpec.model_validate(raw)
         except ValidationError as exc:
-            raise ValueError(f"invalid modelfile {path.name}: {exc}") from exc
+            raise ValueError(f"invalid model spec {path.name}: {exc}") from exc
         result[mf.name] = mf
     return result

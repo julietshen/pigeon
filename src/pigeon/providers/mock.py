@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from ..modelfiles import Modelfile
+from ..modelspecs import ModelSpec
 
 _VIOLATING = ("harass", "kill", "hate", "abuse", "threat", "violat")
 
@@ -15,12 +15,12 @@ def _looks_violating(text: Optional[str]) -> bool:
 class MockProvider:
     """Deterministic provider for local dev and tests. No network, no model."""
 
-    async def run_chat(self, mf: Modelfile, messages: list[dict]) -> str:
+    async def run_chat(self, mf: ModelSpec, messages: list[dict]) -> str:
         content = messages[-1]["content"] if messages else ""
         return "0.9" if _looks_violating(content) else "0.05"
 
     async def run_chat_top_logprobs(
-        self, mf: Modelfile, messages: list[dict]
+        self, mf: ModelSpec, messages: list[dict]
     ) -> list[tuple[str, float]]:
         content = messages[-1]["content"] if messages else ""
         # Skew the yes/no logprobs so softmax lands near 0.9 / 0.1.
@@ -29,7 +29,7 @@ class MockProvider:
         return [("yes", -2.3), ("no", -0.05)]
 
     async def run_classifier(
-        self, mf: Modelfile, *, text: Optional[str], media_url: Optional[str]
+        self, mf: ModelSpec, *, text: Optional[str], media_url: Optional[str]
     ) -> Any:
         hit = _looks_violating(text)
         primary = mf.labels[0] if mf.labels else "verdict"

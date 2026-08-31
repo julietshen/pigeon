@@ -3,14 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .modelfiles import Modelfile
-from .schemas import LabelSpec, ModelfileSummary
+from .modelspecs import ModelSpec
+from .schemas import LabelSpec, ModelSpecSummary
 from .store import Store
 
 
 @dataclass
 class Resolved:
-    modelfile: Modelfile
+    modelspec: ModelSpec
     version: str
     bound_policy: Optional[str]
 
@@ -20,36 +20,36 @@ def _titlecase(label: str) -> str:
 
 
 class Registry:
-    """Turns loaded modelfiles + per-org policies into the signal list a consumer sees,
+    """Turns loaded modelspecs + per-org policies into the signal list a consumer sees,
     and resolves a model reference ("name" or "name@version") to something callable."""
 
-    def __init__(self, modelfiles: dict[str, Modelfile], store: Store):
-        self.modelfiles = modelfiles
+    def __init__(self, modelspecs: dict[str, ModelSpec], store: Store):
+        self.modelspecs = modelspecs
         self.store = store
 
     def ensure_defaults(self, org_id: str) -> None:
-        """First contact for an org enables every base modelfile. Prototype convenience."""
-        if not self.store.enabled_modelfiles(org_id):
-            for name in self.modelfiles:
+        """First contact for an org enables every base model spec. Prototype convenience."""
+        if not self.store.enabled_modelspecs(org_id):
+            for name in self.modelspecs:
                 self.store.enable(org_id, name)
 
-    def list_signals(self, org_id: str) -> list[ModelfileSummary]:
+    def list_signals(self, org_id: str) -> list[ModelSpecSummary]:
         self.ensure_defaults(org_id)
-        enabled = self.store.enabled_modelfiles(org_id)
-        summaries: list[ModelfileSummary] = []
+        enabled = self.store.enabled_modelspecs(org_id)
+        summaries: list[ModelSpecSummary] = []
 
         # Fixed-label classifiers are exposed directly. BYOP bases are exposed only through
         # bound policies (below); completion models are Osprey-only and not signals.
-        for name, mf in self.modelfiles.items():
+        for name, mf in self.modelspecs.items():
             if name in enabled and mf.kind == "classifier":
                 summaries.append(self._classifier_summary(mf))
 
         for pol in self.store.latest_policies(org_id):
-            base = self.modelfiles.get(pol["base"])
+            base = self.modelspecs.get(pol["base"])
             if base is None:
                 continue
             summaries.append(
-                ModelfileSummary(
+                ModelSpecSummary(
                     id=pol["name"],
                     version=str(pol["version"]),
                     kind="byop",
@@ -60,9 +60,9 @@ class Registry:
             )
         return summaries
 
-    def _classifier_summary(self, mf: Modelfile) -> ModelfileSummary:
+    def _classifier_summary(self, mf: ModelSpec) -> ModelSpecSummary:
         labels = [LabelSpec(id=lbl, display=_titlecase(lbl)) for lbl in mf.labels]
-        return ModelfileSummary(
+        return ModelSpecSummary(
             id=mf.name,
             version=mf.version,
             kind="classifier",
@@ -77,16 +77,16 @@ class Registry:
             org_id, name, int(version) if version.isdigit() else None
         )
         if pol is not None:
-            base = self.modelfiles.get(pol["base"])
+            base = self.modelspecs.get(pol["base"])
             if base is None:
                 raise KeyError(
-                    f"base modelfile '{pol['base']}' not found for policy '{name}'"
+                    f"base model spec '{pol['base']}' not found for policy '{name}'"
                 )
             return Resolved(
-                modelfile=base, version=str(pol["version"]), bound_policy=pol["policy_text"]
+                modelspec=base, version=str(pol["version"]), bound_policy=pol["policy_text"]
             )
 
-        mf = self.modelfiles.get(name)
+        mf = self.modelspecs.get(name)
         if mf is None:
             raise KeyError(f"unknown model '{name}'")
-        return Resolved(modelfile=mf, version=mf.version, bound_policy=None)
+        return Resolved(modelspec=mf, version=mf.version, bound_policy=None)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from ..modelfiles import Modelfile
+from ..modelspecs import ModelSpec
 
 """In-process provider: loads a policy-adaptive classifier (Shieldstral) locally via
 transformers on MPS/CUDA/CPU and scores in a single forward pass. Mirrors the reference
@@ -59,7 +59,7 @@ class TransformersProvider:
         return entry
 
     async def run_chat_top_logprobs(
-        self, mf: Modelfile, messages: list[dict]
+        self, mf: ModelSpec, messages: list[dict]
     ) -> list[tuple[str, float]]:
         import torch
 
@@ -75,14 +75,14 @@ class TransformersProvider:
         # score_from_yesno_logprobs applies softmax over these two values.
         return [("yes", z_yes), ("no", z_no)]
 
-    async def run_chat(self, mf: Modelfile, messages: list[dict]) -> str:
+    async def run_chat(self, mf: ModelSpec, messages: list[dict]) -> str:
         raise NotImplementedError(
             "TransformersProvider is scored via first-token logprobs; use parser "
             "type 'logprob_yesno'."
         )
 
     async def run_classifier(
-        self, mf: Modelfile, *, text: Optional[str], media_url: Optional[str]
+        self, mf: ModelSpec, *, text: Optional[str], media_url: Optional[str]
     ) -> Any:
         raise NotImplementedError(
             "TransformersProvider does not serve HF classifier endpoints."

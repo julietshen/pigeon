@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from .modelfiles import Modelfile
+from .modelspecs import ModelSpec
 from .parsing import (
     parse_chat_verdict,
     parse_classifier_scores,
@@ -15,7 +15,7 @@ from .registry import Registry
 from .schemas import ClassifyResult
 
 
-def build_prompt(mf: Modelfile, text: Optional[str], policy: Optional[str]) -> list[dict]:
+def build_prompt(mf: ModelSpec, text: Optional[str], policy: Optional[str]) -> list[dict]:
     user = mf.prompt.user.replace("{{content}}", text or "").replace(
         "{{policy}}", policy or ""
     )
@@ -26,7 +26,7 @@ def build_prompt(mf: Modelfile, text: Optional[str], policy: Optional[str]) -> l
     return messages
 
 
-def _apply_chat_parser(mf: Modelfile, content: str) -> dict[str, float]:
+def _apply_chat_parser(mf: ModelSpec, content: str) -> dict[str, float]:
     if mf.parser.type == "json":
         data = json.loads(content)
         return parse_classifier_scores(resolve_response_path(data, mf.parser.response_path))
@@ -35,7 +35,7 @@ def _apply_chat_parser(mf: Modelfile, content: str) -> dict[str, float]:
     return {label: parse_chat_verdict(content)}
 
 
-def _apply_classifier_parser(mf: Modelfile, raw: object) -> dict[str, float]:
+def _apply_classifier_parser(mf: ModelSpec, raw: object) -> dict[str, float]:
     return parse_classifier_scores(resolve_response_path(raw, mf.parser.response_path))
 
 
@@ -51,7 +51,7 @@ async def classify(
 ) -> tuple[str, list[ClassifyResult]]:
     """Resolve a model reference and return (resolved_version, normalized results)."""
     resolved = registry.resolve(org_id, model_ref)
-    mf = resolved.modelfile
+    mf = resolved.modelspec
     effective_policy = resolved.bound_policy if resolved.bound_policy is not None else policy
 
     if mf.format == "classifier":
