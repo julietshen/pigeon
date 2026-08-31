@@ -1,0 +1,15 @@
+# Fixed-label classifier: served as an HF-style text-classification endpoint.
+# Becomes one Coop signal per label.
+name: shieldgemma-2b
+version: "3"
+model:
+  id: google/shieldgemma-2b
+  runtime: hf-inference
+  endpoint: https://inference.example.local/shieldgemma
+mode: signal
+format: classifier
+input_types: [text]
+parser:
+  type: classifier
+labels: [harassment, hate, sexual, dangerous]
+languages_validated: [en]

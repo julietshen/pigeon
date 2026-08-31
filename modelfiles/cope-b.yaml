@@ -1,0 +1,22 @@
+# Policy-steerable (BYOP) base from Zentropi. Like gpt-oss-safeguard, an org authors a policy
+# against it (POST /v1/policies) to mint a versioned custom model that appears as a signal;
+# Osprey can also call it directly with `policy` supplied at request time.
+name: cope-b
+version: "1"
+model:
+  id: zentropi/cope-b
+  runtime: endpoint
+  endpoint: http://127.0.0.1:8001/v1
+mode: signal
+format: chat
+policy_argument: true
+input_types: [text]
+prompt:
+  system: >-
+    You are a community policy enforcement classifier. Decide whether the content
+    violates the given policy. Reply with only a number from 0 (clearly allowed) to
+    1 (clearly violating).
+  user: "Policy:\n{{policy}}\n\nContent:\n{{content}}"
+parser:
+  type: verdict
+languages_validated: [en]
