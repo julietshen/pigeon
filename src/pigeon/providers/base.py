@@ -12,6 +12,13 @@ class ProviderClient(Protocol):
         """Send a chat/completion request; return the assistant message text."""
         ...
 
+    async def run_chat_top_logprobs(
+        self, mf: Modelfile, messages: list[dict]
+    ) -> list[tuple[str, float]]:
+        """Send a chat request scored by first-token logprobs (Shieldstral). Return the
+        first generated token's top_logprobs as (token, logprob) pairs."""
+        ...
+
     async def run_classifier(
         self, mf: Modelfile, *, text: Optional[str], media_url: Optional[str]
     ) -> Any:

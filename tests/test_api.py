@@ -122,6 +122,36 @@ def test_byop_cope_b_policy_flow(client, auth):
     assert resp.json()["results"][0]["score"] > 0.5
 
 
+def test_shieldstral_logprob_policy_flow(client, auth):
+    created = client.post(
+        "/v1/policies",
+        headers=auth,
+        json={
+            "name": "violence-policy",
+            "base": "shieldstral",
+            "policyText": "Does this content depict violence?",
+            "display": "Violence policy",
+        },
+    )
+    assert created.status_code == 200
+
+    disc = client.get("/v1/modelfiles", headers=auth).json()["modelfiles"]
+    custom = next(m for m in disc if m["id"] == "violence-policy")
+    assert custom["kind"] == "byop"
+    assert custom["base"] == "shieldstral"
+
+    # mock provider skews yes/no logprobs on the keyword; score comes from softmax.
+    resp = client.post(
+        "/v1/classify",
+        headers=auth,
+        json={"model": "violence-policy", "input": {"text": "a threat of violence"}},
+    )
+    assert resp.status_code == 200
+    result = resp.json()["results"][0]
+    assert result["label"] == "verdict"
+    assert result["score"] > 0.5
+
+
 def test_byop_image_input_not_yet_supported(client, auth):
     # Shieldstral is multimodal BYOP, but the chat/BYOP path is text-only for now.
     resp = client.post(

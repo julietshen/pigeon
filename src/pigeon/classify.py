@@ -4,7 +4,12 @@ import json
 from typing import Optional
 
 from .modelfiles import Modelfile
-from .parsing import parse_chat_verdict, parse_classifier_scores, resolve_response_path
+from .parsing import (
+    parse_chat_verdict,
+    parse_classifier_scores,
+    resolve_response_path,
+    score_from_yesno_logprobs,
+)
 from .providers.base import ProviderClient
 from .registry import Registry
 from .schemas import ClassifyResult
@@ -65,8 +70,13 @@ async def classify(
                 f"model '{mf.name}': image input is not yet supported for chat/BYOP models"
             )
         messages = build_prompt(mf, text=text, policy=effective_policy)
-        content = await provider.run_chat(mf, messages)
-        scores = _apply_chat_parser(mf, content)
+        if mf.parser.type == "logprob_yesno":
+            top_logprobs = await provider.run_chat_top_logprobs(mf, messages)
+            label = mf.labels[0] if mf.labels else "verdict"
+            scores = {label: score_from_yesno_logprobs(top_logprobs)}
+        else:
+            content = await provider.run_chat(mf, messages)
+            scores = _apply_chat_parser(mf, content)
         results = [ClassifyResult(label=lbl, score=score) for lbl, score in scores.items()]
 
     if not results:

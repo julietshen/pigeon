@@ -24,8 +24,9 @@ class PromptSpec(BaseModel):
 
 
 class ParserSpec(BaseModel):
-    # classifier: HF label/score array; verdict: chat text -> single score; json: JSON body -> scores
-    type: Literal["classifier", "json", "verdict"] = "verdict"
+    # classifier: HF label/score array; verdict: chat text -> single score; json: JSON body ->
+    # scores; logprob_yesno: softmax over the yes/no first-token logprobs (Shieldstral).
+    type: Literal["classifier", "json", "verdict", "logprob_yesno"] = "verdict"
     response_path: Optional[str] = None  # dot-path into the response before parsing
 
 

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from pigeon.parsing import parse_chat_verdict, parse_classifier_scores, resolve_response_path
+from pigeon.parsing import (
+    parse_chat_verdict,
+    parse_classifier_scores,
+    resolve_response_path,
+    score_from_yesno_logprobs,
+)
 
 
 def test_classifier_flat_list():
@@ -47,6 +52,26 @@ def test_verdict_keywords():
 def test_verdict_uninterpretable_raises():
     with pytest.raises(ValueError):
         parse_chat_verdict("purple monkey dishwasher")
+
+
+def test_yesno_logprobs_symmetric():
+    # equal logprobs -> 0.5
+    assert score_from_yesno_logprobs([("yes", -1.0), ("no", -1.0)]) == 0.5
+
+
+def test_yesno_logprobs_favors_yes():
+    score = score_from_yesno_logprobs([(" Yes", -0.05), ("no", -3.0)])
+    assert score > 0.9
+
+
+def test_yesno_logprobs_only_no_present():
+    # if only "no" is in the top logprobs, score collapses toward 0
+    assert score_from_yesno_logprobs([("no", -0.01), ("maybe", -5.0)]) == 0.0
+
+
+def test_yesno_logprobs_missing_both_raises():
+    with pytest.raises(ValueError):
+        score_from_yesno_logprobs([("maybe", -1.0), ("perhaps", -2.0)])
 
 
 def test_response_path_nested():

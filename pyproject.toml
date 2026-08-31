@@ -15,6 +15,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+# In-process local inference (Shieldstral and other transformers models on MPS/CUDA/CPU).
+local = ["torch>=2.2", "transformers>=5.0", "torchvision>=0.17", "accelerate>=0.30"]
 
 [project.scripts]
 pigeon = "pigeon.cli:main"

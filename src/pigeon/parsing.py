@@ -56,6 +56,32 @@ def parse_classifier_scores(payload: Any) -> dict[str, float]:
     return scores
 
 
+def score_from_yesno_logprobs(
+    top_logprobs: list[tuple[str, float]],
+    positive: str = "yes",
+    negative: str = "no",
+) -> float:
+    """Shieldstral convention: the model emits a single yes/no token; the continuous
+    safety score is the softmax over the yes and no first-token logprobs. Takes the
+    top_logprobs of the first generated token as (token, logprob) pairs."""
+    z_yes: Optional[float] = None
+    z_no: Optional[float] = None
+    for token, logprob in top_logprobs:
+        normalized = token.strip().lower()
+        if normalized == positive and z_yes is None:
+            z_yes = logprob
+        elif normalized == negative and z_no is None:
+            z_no = logprob
+    if z_yes is None and z_no is None:
+        raise ValueError(
+            "logprob_yesno: no yes/no token found in the response's top logprobs"
+        )
+    ey = math.exp(z_yes) if z_yes is not None else 0.0
+    en = math.exp(z_no) if z_no is not None else 0.0
+    total = ey + en
+    return clamp01(ey / total) if total > 0 else 0.0
+
+
 _YES = ("yes", "true", "violat", "unsafe", "flag")
 _NO = ("no", "false", "safe", "clean", "allow")
 _MAYBE = ("unsure", "uncertain", "unclear", "maybe")

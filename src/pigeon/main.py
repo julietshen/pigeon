@@ -19,6 +19,10 @@ def _make_provider(settings: Settings) -> ProviderClient:
         from .providers.litellm_provider import LiteLLMProvider
 
         return LiteLLMProvider()
+    if settings.provider == "local":
+        from .providers.transformers_provider import TransformersProvider
+
+        return TransformersProvider()
     return MockProvider()
 
 

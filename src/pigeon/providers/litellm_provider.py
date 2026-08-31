@@ -41,6 +41,26 @@ class LiteLLMProvider:
         response = await litellm.acompletion(**kwargs)
         return response.choices[0].message.content or ""
 
+    async def run_chat_top_logprobs(
+        self, mf: Modelfile, messages: list[dict]
+    ) -> list[tuple[str, float]]:
+        import litellm
+
+        kwargs: dict[str, Any] = {
+            "model": _litellm_model(mf),
+            "messages": messages,
+            "temperature": 0,
+            "max_tokens": 1,
+            "logprobs": True,
+            "top_logprobs": 20,
+            "timeout": self._timeout,
+        }
+        if mf.model.endpoint:
+            kwargs["api_base"] = mf.model.endpoint
+        response = await litellm.acompletion(**kwargs)
+        entries = response.choices[0].logprobs.content[0].top_logprobs
+        return [(entry.token, entry.logprob) for entry in entries]
+
     async def run_classifier(
         self, mf: Modelfile, *, text: Optional[str], media_url: Optional[str]
     ) -> Any:

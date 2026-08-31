@@ -1,26 +1,31 @@
-# Policy-steerable (BYOP) multimodal safety model from the Mistral family. Takes a policy
-# plus content and returns a verdict. Author a policy against it (POST /v1/policies) to mint
-# a versioned custom model that appears as a signal; Osprey can also call it directly with
-# `policy` at request time.
+# Shieldstral 1.0 (3B): Mistral's policy-adaptive multimodal safety classifier. Built on
+# Ministral-3-3B + a Pixtral vision encoder; takes a natural-language policy expressed as a
+# yes/no question plus content, and returns a continuous safety score from the first-token
+# yes/no logprobs. Apache 2.0, 12 languages, runs on one 16GB GPU.
 #
+# BYOP: author a policy against it (POST /v1/policies) to mint a versioned custom model that
+# appears as a signal; Osprey can call it directly with `policy` at request time. The policy
+# should be phrased as the yes/no <Query> the model judges (e.g. "Does this content harass a
+# person?").
+#
+# Serve with: vllm serve mistralai/Shieldstral-1.0-3B --max-model-len 32768
 # NOTE: image input is declared (Shieldstral is multimodal) but Pigeon's chat/BYOP path is
-# text-only today; image classify requests against a BYOP model fail loudly until the vision
-# path lands. Point model.endpoint at your Shieldstral deployment for live scoring.
+# text-only today; image classify requests fail loudly until the vision path lands.
 name: shieldstral
 version: "1"
 model:
-  id: mistral-community/shieldstral
-  runtime: endpoint
-  endpoint: http://127.0.0.1:8002/v1
+  id: mistralai/Shieldstral-1.0-3B
+  runtime: vllm
+  endpoint: http://127.0.0.1:8000/v1
 mode: signal
 format: chat
 policy_argument: true
 input_types: [text, image]
+# Prompt matches ROOST/vibecheck/eval/models/shieldstral.py: the policy is the <Query>
+# (the criterion judged against), <Instruct> carries generic framing + answer polarity.
 prompt:
-  system: >-
-    You are a multimodal safety classifier. Apply the policy to the content and
-    answer with only a number from 0 (clearly allowed) to 1 (clearly violating).
-  user: "Policy:\n{{policy}}\n\nContent:\n{{content}}"
+  system: "Judge whether the Document meets the requirements based on the Query and the Instruction provided."
+  user: "<Instruct>: You are a content safety classifier for an online platform. The Query contains a content policy. Answer yes if the Document violates that policy, and no if it does not.\n\n<Query>: {{policy}}\n\n<Document>: {{content}}"
 parser:
-  type: verdict
-languages_validated: [en, fr]
+  type: logprob_yesno
+languages_validated: [en, fr, de, es, it, pt, nl, pl, ru, zh, ja, ko]

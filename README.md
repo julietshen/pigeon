@@ -57,8 +57,49 @@ curl -s localhost:8900/v1/policies -H "Authorization: Bearer $TOKEN" \
   -d '{"name":"my-harassment-policy","base":"cope-b","policyText":"Flag harassment.","display":"Harassment policy"}'
 ```
 
-Set `PIGEON_PROVIDER=live` to call real inference through LiteLLM (chat/completion) and
-HF-style endpoints (classifiers). Point each modelfile's `model.endpoint` at your runtime.
+## Providers
+
+The inference backend is a swappable seam, selected by `PIGEON_PROVIDER`. All three run the
+same modelfiles and the same `/v1/classify` contract.
+
+| `PIGEON_PROVIDER` | Backend | Use for |
+| --- | --- | --- |
+| `mock` (default) | none | tests, wiring, local dev; keyword-based scores, no network |
+| `live` | LiteLLM | any OpenAI-compatible endpoint: **Ollama**, vLLM, HF TGI, hosted APIs |
+| `local` | transformers | in-process models on MPS/CUDA/CPU (needs the `local` extra) |
+
+### `live` — hosted or self-served endpoints (verified with Ollama)
+
+`live` routes chat/completion through LiteLLM and HF-style classifiers over HTTP. Point each
+modelfile's `model.endpoint` at your runtime. Verified end to end against **Ollama** on macOS
+(Apple Silicon): a BYOP `verdict` modelfile with `runtime: ollama`, `model.id: <ollama model>`,
+`endpoint: http://localhost:11434` scores real content through the full Pigeon path.
+
+```bash
+PIGEON_PROVIDER=live uv run pigeon
+```
+
+### `local` — in-process transformers (verified with Shieldstral on MPS)
+
+For models you run in-process rather than behind a server. Install the extra and set the
+provider; models load lazily and are cached per id.
+
+```bash
+uv sync --extra local           # torch, transformers>=5.0
+PIGEON_PROVIDER=local uv run pigeon
+```
+
+Verified end to end with **Shieldstral 1.0-3B** loaded via `AutoModelForImageTextToText` on
+Apple MPS (bfloat16), scored in a single forward pass — the continuous score is the softmax
+over the max single-token yes/no logits (parser `logprob_yesno`). The provider mirrors the
+reference loader in `ROOST/vibecheck/eval/models/shieldstral.py`. The bound policy is the yes/no
+`<Query>` the model judges (e.g. "Does this content harass a person?").
+
+Shieldstral can also be served OpenAI-compatible via vLLM (`vllm serve mistralai/Shieldstral-1.0-3B
+--max-model-len 32768`) and reached through the `live` provider on a CUDA GPU.
+
+Text-only for now on both providers; image input on a BYOP model returns 422 until the vision
+path lands.
 
 ## Layout
 
@@ -66,13 +107,16 @@ HF-style endpoints (classifiers). Point each modelfile's `model.endpoint` at you
 - `src/pigeon/registry.py` - modelfiles + policies -> the signal list; model-ref resolution
 - `src/pigeon/parsing.py` - response normalization (ported from Coop's `modelClient.ts`)
 - `src/pigeon/classify.py` - the classify orchestration
-- `src/pigeon/providers/` - the inference seam (`mock`, `litellm_provider`)
+- `src/pigeon/providers/` - the inference seam (`mock`, `litellm_provider`, `transformers_provider`)
 - `src/pigeon/api.py` - the HTTP endpoints
-- `modelfiles/` - example modelfiles
+- `modelfiles/` - example modelfiles (`shieldgemma-2b` classifier, `shieldstral`/`cope-b` BYOP)
 
 ## Known gaps (for the eng team)
 
+- Image/multimodal input on BYOP models returns 422; the vision path (Shieldstral is
+  multimodal) is not wired yet.
 - Response caching (one model call serving every label) is not yet ported from Coop.
 - `chat-harmony` format is declared but not yet implemented.
 - Auth is a static token->org map; wire to real per-org credentials.
-- Provider layer calls LiteLLM directly; a LiteLLM-proxy adapter is the likely next step.
+- `local` provider runs one model instance sequentially; no batching or concurrency control.
+- `live` provider calls LiteLLM directly; a LiteLLM-proxy adapter is a likely next step.

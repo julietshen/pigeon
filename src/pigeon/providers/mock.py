@@ -19,6 +19,15 @@ class MockProvider:
         content = messages[-1]["content"] if messages else ""
         return "0.9" if _looks_violating(content) else "0.05"
 
+    async def run_chat_top_logprobs(
+        self, mf: Modelfile, messages: list[dict]
+    ) -> list[tuple[str, float]]:
+        content = messages[-1]["content"] if messages else ""
+        # Skew the yes/no logprobs so softmax lands near 0.9 / 0.1.
+        if _looks_violating(content):
+            return [("yes", -0.05), ("no", -2.3)]
+        return [("yes", -2.3), ("no", -0.05)]
+
     async def run_classifier(
         self, mf: Modelfile, *, text: Optional[str], media_url: Optional[str]
     ) -> Any:
