@@ -14,7 +14,7 @@ def test_discover_lists_classifier_not_byop_base(client, auth):
     ids = {m["id"] for m in body["modelfiles"]}
     assert "shieldgemma-2b" in ids
     # BYOP bases are reachable only via a bound policy, never exposed as a signal directly.
-    assert "gpt-oss-safeguard" not in ids
+    assert "shieldstral" not in ids
     assert "cope-b" not in ids
 
 
@@ -54,7 +54,7 @@ def test_byop_pre_bound_policy_flow(client, auth):
         headers=auth,
         json={
             "name": "my-harassment-policy",
-            "base": "gpt-oss-safeguard",
+            "base": "cope-b",
             "policyText": "Flag content that harasses a person.",
             "display": "Harassment policy",
         },
@@ -66,7 +66,7 @@ def test_byop_pre_bound_policy_flow(client, auth):
     disc = client.get("/v1/modelfiles", headers=auth).json()["modelfiles"]
     custom = next(m for m in disc if m["id"] == "my-harassment-policy")
     assert custom["kind"] == "byop"
-    assert custom["base"] == "gpt-oss-safeguard"
+    assert custom["base"] == "cope-b"
     assert [lbl["id"] for lbl in custom["labels"]] == ["verdict"]
 
     # Classify against it: policy is held server-side, request sends no policy.
@@ -86,7 +86,7 @@ def test_byop_policy_versions_increment(client, auth):
         r = client.post(
             "/v1/policies",
             headers=auth,
-            json={"name": "p", "base": "gpt-oss-safeguard", "policyText": f"v{expected}"},
+            json={"name": "p", "base": "cope-b", "policyText": f"v{expected}"},
         )
         assert r.json()["version"] == expected
 
@@ -122,13 +122,28 @@ def test_byop_cope_b_policy_flow(client, auth):
     assert resp.json()["results"][0]["score"] > 0.5
 
 
+def test_byop_image_input_not_yet_supported(client, auth):
+    # Shieldstral is multimodal BYOP, but the chat/BYOP path is text-only for now.
+    resp = client.post(
+        "/v1/classify",
+        headers=auth,
+        json={
+            "model": "shieldstral",
+            "input": {"mediaUrl": "https://cdn.test/x.png"},
+            "policy": "Flag violence.",
+        },
+    )
+    assert resp.status_code == 422
+    assert "image input is not yet supported" in resp.json()["detail"]
+
+
 def test_byop_runtime_policy_osprey_path(client, auth):
     # Osprey path: call the base directly with a policy supplied at request time.
     resp = client.post(
         "/v1/classify",
         headers=auth,
         json={
-            "model": "gpt-oss-safeguard",
+            "model": "cope-b",
             "input": {"text": "harass"},
             "policy": "Flag harassment.",
         },

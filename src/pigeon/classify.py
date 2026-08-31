@@ -57,6 +57,13 @@ async def classify(
             ClassifyResult(label=lbl, score=scores[lbl]) for lbl in wanted if lbl in scores
         ]
     else:
+        if media_url is not None:
+            # Shieldstral and other multimodal BYOP models are declared image-capable,
+            # but Pigeon's chat/BYOP path is text-only today. Fail loudly rather than
+            # scoring on empty content.
+            raise ValueError(
+                f"model '{mf.name}': image input is not yet supported for chat/BYOP models"
+            )
         messages = build_prompt(mf, text=text, policy=effective_policy)
         content = await provider.run_chat(mf, messages)
         scores = _apply_chat_parser(mf, content)

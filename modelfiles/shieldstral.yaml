@@ -1,0 +1,26 @@
+# Policy-steerable (BYOP) multimodal safety model from the Mistral family. Takes a policy
+# plus content and returns a verdict. Author a policy against it (POST /v1/policies) to mint
+# a versioned custom model that appears as a signal; Osprey can also call it directly with
+# `policy` at request time.
+#
+# NOTE: image input is declared (Shieldstral is multimodal) but Pigeon's chat/BYOP path is
+# text-only today; image classify requests against a BYOP model fail loudly until the vision
+# path lands. Point model.endpoint at your Shieldstral deployment for live scoring.
+name: shieldstral
+version: "1"
+model:
+  id: mistral-community/shieldstral
+  runtime: endpoint
+  endpoint: http://127.0.0.1:8002/v1
+mode: signal
+format: chat
+policy_argument: true
+input_types: [text, image]
+prompt:
+  system: >-
+    You are a multimodal safety classifier. Apply the policy to the content and
+    answer with only a number from 0 (clearly allowed) to 1 (clearly violating).
+  user: "Policy:\n{{policy}}\n\nContent:\n{{content}}"
+parser:
+  type: verdict
+languages_validated: [en, fr]

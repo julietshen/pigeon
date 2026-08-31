@@ -20,7 +20,7 @@ inference provider, without Coop or Osprey.
 - **Classify** (`POST /v1/classify`): input in, normalized `[{label, score}]` out. The caller
   never sees prompts, wire formats, or response paths.
 - **Policy management** (`POST /v1/policies`): author a policy against a policy-steerable base
-  (gpt-oss-safeguard, CoPE-B) to mint a versioned custom model. This is the "build a custom
+  (CoPE-B) to mint a versioned custom model. This is the "build a custom
   model from an open-weight base" path.
 
 ## Model kinds
@@ -54,7 +54,7 @@ curl -s localhost:8900/v1/classify -H "Authorization: Bearer $TOKEN" \
 # Author a policy -> custom model, then classify against it
 curl -s localhost:8900/v1/policies -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"name":"my-harassment-policy","base":"gpt-oss-safeguard","policyText":"Flag harassment.","display":"Harassment policy"}'
+  -d '{"name":"my-harassment-policy","base":"cope-b","policyText":"Flag harassment.","display":"Harassment policy"}'
 ```
 
 Set `PIGEON_PROVIDER=live` to call real inference through LiteLLM (chat/completion) and
