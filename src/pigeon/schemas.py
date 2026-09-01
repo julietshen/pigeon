@@ -18,6 +18,9 @@ class ModelSpecSummary(BaseModel):
     version: str
     kind: Literal["classifier", "byop", "completion"]
     base: Optional[str] = None
+    # Underlying model id (e.g. a HuggingFace "owner/repo"), so consumers can load
+    # the real model card. For BYOP customs this is the base spec's model id.
+    modelId: Optional[str] = None
     inputTypes: list[str]
     labels: list[LabelSpec]
 

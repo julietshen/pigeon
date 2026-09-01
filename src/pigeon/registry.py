@@ -54,6 +54,7 @@ class Registry:
                     version=str(pol["version"]),
                     kind="byop",
                     base=pol["base"],
+                    modelId=base.model.id,
                     inputTypes=list(base.input_types),
                     labels=[LabelSpec(id="verdict", display=pol["display"])],
                 )
@@ -66,6 +67,7 @@ class Registry:
             id=mf.name,
             version=mf.version,
             kind="classifier",
+            modelId=mf.model.id,
             inputTypes=list(mf.input_types),
             labels=labels,
         )

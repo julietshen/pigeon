@@ -18,6 +18,22 @@ def test_discover_lists_classifier_not_byop_base(client, auth):
     assert "cope-b" not in ids
 
 
+def test_discover_exposes_underlying_model_id(client, auth):
+    body = client.get("/v1/modelspecs", headers=auth).json()
+    sg = next(m for m in body["modelspecs"] if m["id"] == "shieldgemma-2b")
+    assert sg["modelId"] == "google/shieldgemma-2b"
+
+    # A BYOP custom model reports the base spec's underlying model id.
+    client.post(
+        "/v1/policies",
+        headers=auth,
+        json={"name": "vp", "base": "shieldstral", "policyText": "violence?"},
+    )
+    disc = client.get("/v1/modelspecs", headers=auth).json()["modelspecs"]
+    custom = next(m for m in disc if m["id"] == "vp")
+    assert custom["modelId"] == "mistralai/Shieldstral-1.0-3B"
+
+
 def test_discover_classifier_fans_out_to_labels(client, auth):
     body = client.get("/v1/modelspecs", headers=auth).json()
     sg = next(m for m in body["modelspecs"] if m["id"] == "shieldgemma-2b")
